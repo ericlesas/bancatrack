@@ -32,6 +32,7 @@ function submit() {
       <button class="text-button" type="button" @click="mode = mode === 'sign-in' ? 'sign-up' : 'sign-in'">
         {{ mode === 'sign-in' ? 'Ainda não tenho conta' : 'Já tenho uma conta' }}
       </button>
+      <p class="auth-version">BancaTrack · versão 0.1.0</p>
     </section>
   </main>
 </template>
