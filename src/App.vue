@@ -6,7 +6,7 @@ import BetFilters from './components/BetFilters.vue'
 import BetForm from './components/BetForm.vue'
 import BetList from './components/BetList.vue'
 import MonthlyChart from './components/MonthlyChart.vue'
-import { calculateAccumulatedResult, calculateBetIndicators, calculateMonthlyResults } from './domain/calculations.js'
+import { calculateDashboardMetrics, calculateMonthlyResults, filterBetsByMonth } from './domain/calculations.js'
 import { observeAuth, signIn, signOutUser, signUp } from './services/auth-service.js'
 import { createBet, observeBets, removeBet as deleteBet, updateBet } from './services/bets-repository.js'
 
@@ -14,6 +14,7 @@ const activeView = ref('dashboard')
 const bets = ref([])
 const editingBet = ref(null)
 const filters = ref({ month: '', result: '', wasTaken: '' })
+const dashboardMonth = ref('')
 const user = ref(null)
 const authReady = ref(false)
 const authPending = ref(false)
@@ -21,9 +22,10 @@ const authError = ref('')
 const dataError = ref('')
 const syncState = ref('')
 let stopObservingBets = null
-const monthlyResults = computed(() => calculateMonthlyResults(bets.value))
-const accumulatedResult = computed(() => calculateAccumulatedResult(bets.value))
-const indicators = computed(() => calculateBetIndicators(bets.value))
+const availableMonths = computed(() => calculateMonthlyResults(bets.value))
+const dashboardBets = computed(() => filterBetsByMonth(bets.value, dashboardMonth.value))
+const monthlyResults = computed(() => calculateMonthlyResults(dashboardBets.value))
+const dashboardMetrics = computed(() => calculateDashboardMetrics(dashboardBets.value))
 const latestMonth = computed(() => monthlyResults.value[0] ?? null)
 const visibleBets = computed(() => bets.value.filter((bet) => {
   if (filters.value.month && !bet.betDate.startsWith(filters.value.month)) return false
@@ -33,6 +35,9 @@ const visibleBets = computed(() => bets.value.filter((bet) => {
 const formattedResult = (value) => new Intl.NumberFormat('pt-BR', {
   style: 'currency', currency: 'BRL', minimumFractionDigits: 2
 }).format(value)
+const formattedPercentage = (value) => new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 }).format(value / 100)
+const formatMonth = (month) => new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+  .format(new Date(`${month}-01T00:00:00Z`))
 
 function friendlyAuthError(error) {
   const messages = {
@@ -116,17 +121,30 @@ onUnmounted(() => {
     </header>
 
     <section v-if="activeView === 'dashboard'" class="dashboard" aria-label="Dashboard">
+      <div class="dashboard-toolbar">
+        <label>
+          <span>Período</span>
+          <select v-model="dashboardMonth">
+            <option value="">Todo o histórico</option>
+            <option v-for="item in availableMonths" :key="item.month" :value="item.month">{{ formatMonth(item.month) }}</option>
+          </select>
+        </label>
+      </div>
+
       <article class="hero-card">
-        <p>Resultado acumulado</p>
-        <strong :class="accumulatedResult >= 0 ? 'positive' : 'negative'">{{ formattedResult(accumulatedResult) }}</strong>
-        <small>Somatório líquido das entradas registradas</small>
+        <p>{{ dashboardMonth ? 'Resultado do período' : 'Resultado acumulado' }}</p>
+        <strong :class="dashboardMetrics.netResult >= 0 ? 'positive' : 'negative'">{{ formattedResult(dashboardMetrics.netResult) }}</strong>
+        <small>{{ dashboardMonth ? formatMonth(dashboardMonth) : 'Somatório líquido das entradas registradas' }}</small>
       </article>
 
       <section class="summary-grid" aria-label="Resumo">
-        <article class="summary-card"><span>Entradas realizadas</span><strong>{{ indicators.taken }}</strong></article>
-        <article class="summary-card"><span>Apostas ganhas</span><strong class="positive">{{ indicators.green }}</strong></article>
-        <article class="summary-card"><span>Apostas perdidas</span><strong class="negative">{{ indicators.red }}</strong></article>
-        <article class="summary-card"><span>Meses acompanhados</span><strong>{{ monthlyResults.length }}</strong></article>
+        <article class="summary-card"><span>Entradas realizadas</span><strong>{{ dashboardMetrics.taken }}</strong></article>
+        <article class="summary-card"><span>Apostas finalizadas</span><strong>{{ dashboardMetrics.settled }}</strong></article>
+        <article class="summary-card"><span>Apostas ganhas</span><strong class="positive">{{ dashboardMetrics.green }}</strong></article>
+        <article class="summary-card"><span>Apostas perdidas</span><strong class="negative">{{ dashboardMetrics.red }}</strong></article>
+        <article class="summary-card"><span>Taxa de acerto</span><strong>{{ formattedPercentage(dashboardMetrics.winRate) }}%</strong></article>
+        <article class="summary-card"><span>ROI finalizado</span><strong :class="dashboardMetrics.roi >= 0 ? 'positive' : 'negative'">{{ formattedPercentage(dashboardMetrics.roi) }}%</strong></article>
+        <article class="summary-card summary-card-wide"><span>Volume finalizado</span><strong>{{ formattedResult(dashboardMetrics.settledStake) }}</strong></article>
       </section>
 
       <section class="content-card">

@@ -68,3 +68,23 @@ export function calculateBetIndicators(bets) {
     red: takenBets.filter((bet) => bet.result === BET_RESULTS.RED).length
   }
 }
+
+export function filterBetsByMonth(bets, month) {
+  return month ? bets.filter((bet) => bet.betDate.startsWith(month)) : bets
+}
+
+export function calculateDashboardMetrics(bets) {
+  const indicators = calculateBetIndicators(bets)
+  const settledBets = bets.filter((bet) => bet.wasTaken && [BET_RESULTS.GREEN, BET_RESULTS.RED].includes(bet.result))
+  const settledStake = roundCurrency(settledBets.reduce((total, bet) => total + Number(bet.stake), 0))
+  const netResult = calculateAccumulatedResult(settledBets)
+
+  return {
+    ...indicators,
+    settled: settledBets.length,
+    settledStake,
+    netResult,
+    winRate: settledBets.length ? (indicators.green / settledBets.length) * 100 : 0,
+    roi: settledStake ? (netResult / settledStake) * 100 : 0
+  }
+}
