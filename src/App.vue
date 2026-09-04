@@ -148,7 +148,7 @@ onUnmounted(() => {
         <article class="summary-card"><span>Apostas perdidas</span><strong class="negative">{{ dashboardMetrics.red }}</strong></article>
         <article class="summary-card"><span>Taxa de acerto</span><strong>{{ formattedPercentage(dashboardMetrics.winRate) }}%</strong></article>
         <article class="summary-card"><span>ROI finalizado</span><strong :class="dashboardMetrics.roi >= 0 ? 'positive' : 'negative'">{{ formattedPercentage(dashboardMetrics.roi) }}%</strong></article>
-        <article class="summary-card summary-card-wide"><span>Volume finalizado</span><strong>{{ formattedResult(dashboardMetrics.settledStake) }}</strong></article>
+        <article class="summary-card summary-card-wide"><span>Valor apostado no período</span><strong>{{ formattedResult(dashboardMetrics.settledStake) }}</strong></article>
       </section>
 
       <section class="content-card">
