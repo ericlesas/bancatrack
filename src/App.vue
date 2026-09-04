@@ -35,7 +35,7 @@ const visibleBets = computed(() => bets.value.filter((bet) => {
 const formattedResult = (value) => new Intl.NumberFormat('pt-BR', {
   style: 'currency', currency: 'BRL', minimumFractionDigits: 2
 }).format(value)
-const formattedPercentage = (value) => new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 }).format(value / 100)
+const formattedPercentage = (value) => new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 }).format(value)
 const formatMonth = (month) => new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric', timeZone: 'UTC' })
   .format(new Date(`${month}-01T00:00:00Z`))
 
@@ -121,15 +121,19 @@ onUnmounted(() => {
     </header>
 
     <section v-if="activeView === 'dashboard'" class="dashboard" aria-label="Dashboard">
-      <div class="dashboard-toolbar">
+      <section class="dashboard-period" aria-label="Filtro de período">
+        <div>
+          <span class="dashboard-period-kicker">Visão do dashboard</span>
+          <strong>{{ dashboardMonth ? formatMonth(dashboardMonth) : 'Todo o histórico' }}</strong>
+        </div>
         <label>
-          <span>Período</span>
+          <span>Selecionar período</span>
           <select v-model="dashboardMonth">
             <option value="">Todo o histórico</option>
             <option v-for="item in availableMonths" :key="item.month" :value="item.month">{{ formatMonth(item.month) }}</option>
           </select>
         </label>
-      </div>
+      </section>
 
       <article class="hero-card">
         <p>{{ dashboardMonth ? 'Resultado do período' : 'Resultado acumulado' }}</p>
