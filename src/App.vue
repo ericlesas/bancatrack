@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onUnmounted, ref } from 'vue'
 import AuthForm from './components/AuthForm.vue'
 import AppSplash from './components/AppSplash.vue'
 import BetFilters from './components/BetFilters.vue'
@@ -64,9 +64,11 @@ async function authenticate(action, credentials) {
 async function addBet(bet) {
   dataError.value = ''
   try {
-    if (editingBet.value) await updateBet(user.value.uid, bet)
+    const wasEditing = Boolean(editingBet.value)
+    if (wasEditing) await updateBet(user.value.uid, bet)
     else await createBet(user.value.uid, bet)
     editingBet.value = null
+    if (wasEditing) activeView.value = 'history'
   }
   catch { dataError.value = 'Não foi possível salvar a entrada. Ela será tentada novamente quando houver conexão.' }
 }
@@ -86,9 +88,22 @@ function startBetsObserver(firebaseUser) {
   }, () => { dataError.value = 'Não foi possível carregar suas entradas. Verifique as regras do Firestore.' })
 }
 
-function editBet(bet) {
+async function editBet(bet) {
   editingBet.value = bet
+  activeView.value = 'entry'
+  await nextTick()
   window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+function openNewEntry() {
+  editingBet.value = null
+  activeView.value = 'entry'
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+function cancelEditing() {
+  editingBet.value = null
+  activeView.value = 'history'
 }
 
 const stopObservingAuth = observeAuth((firebaseUser) => {
@@ -115,7 +130,8 @@ onUnmounted(() => {
   <main v-else class="app-shell">
     <header class="topbar">
       <div>
-        <h1>Gestão de banca</h1>
+        <h1>BancaTrack</h1>
+        <p class="app-subtitle">Gestão inteligente de apostas</p>
       </div>
       <div class="header-actions"><span class="offline-badge">{{ syncState || 'Conectando…' }}</span><button class="sign-out" type="button" @click="signOutUser">Sair</button></div>
     </header>
@@ -158,17 +174,22 @@ onUnmounted(() => {
       </section>
     </section>
 
-    <section v-else class="content-card" aria-label="Entradas">
+    <section v-else-if="activeView === 'entry'" class="content-card" aria-label="Nova entrada">
       <div class="section-heading"><h2>{{ editingBet ? 'Editar entrada' : 'Nova entrada' }}</h2><span>{{ bets.length }} cadastrada(s)</span></div>
-      <BetForm :bet="editingBet" @cancel="editingBet = null" @save="addBet" />
+      <BetForm :bet="editingBet" @cancel="cancelEditing" @save="addBet" />
       <p v-if="dataError" class="form-error" role="alert">{{ dataError }}</p>
+    </section>
+
+    <section v-else class="content-card" aria-label="Histórico de entradas">
+      <div class="section-heading"><div><h2>Histórico</h2><span class="section-caption">Consulte, filtre e edite suas entradas.</span></div><span>{{ bets.length }} cadastrada(s)</span></div>
       <BetFilters v-model="filters" :bets="bets" />
       <BetList :bets="visibleBets" @edit="editBet" @remove="removeBet" />
     </section>
 
     <nav class="bottom-nav" aria-label="Navegação principal">
       <button :class="{ active: activeView === 'dashboard' }" @click="activeView = 'dashboard'">Dashboard</button>
-      <button :class="{ active: activeView === 'entries' }" @click="activeView = 'entries'">Entradas</button>
+      <button :class="{ active: activeView === 'entry' }" @click="openNewEntry">Nova entrada</button>
+      <button :class="{ active: activeView === 'history' }" @click="activeView = 'history'">Histórico</button>
     </nav>
   </main>
 </template>
