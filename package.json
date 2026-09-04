@@ -10,7 +10,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "hosting:deploy": "firebase deploy --only hosting"
   },
   "dependencies": {
     "firebase": "^12.18.0",
@@ -18,6 +19,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^4.6.2",
+    "firebase-tools": "^15.29.0",
     "vite": "^4.5.3",
     "vite-plugin-pwa": "0.15.0",
     "vitest": "^0.34.6"
