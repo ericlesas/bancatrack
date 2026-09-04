@@ -17,6 +17,10 @@ function submit() {
 <template>
   <main class="auth-shell">
     <section class="auth-card">
+      <div class="auth-brand">
+        <img src="/icons/bancatrack-192.png" alt="Logo BancaTrack" width="72" height="72" />
+        <strong>BancaTrack</strong>
+      </div>
       <h1>{{ mode === 'sign-in' ? 'Entre na sua banca' : 'Crie sua conta' }}</h1>
       <p class="auth-intro">Suas entradas ficam protegidas e disponíveis nos seus dispositivos.</p>
 
