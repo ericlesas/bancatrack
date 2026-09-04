@@ -58,7 +58,9 @@ function saveBet() {
   <form class="bet-form" @submit.prevent="saveBet">
     <label>
       <span>Data da entrada</span>
-      <input v-model="form.betDate" type="date" required />
+      <span class="date-control">
+        <input v-model="form.betDate" type="date" required />
+      </span>
     </label>
 
     <div class="field-grid">
