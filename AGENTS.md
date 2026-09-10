@@ -91,3 +91,16 @@ Ao receber uma tarefa:
 5. Informe quais arquivos foram alterados.
 6. Resuma o que foi implementado.
 7. Destaque decisões arquiteturais ou impactos importantes.
+8. Quando uma alteração for destinada à branch `main`, validar build e testes antes do deploy.
+9. Após merge na `main`, realizar deploy no Firebase Hosting.
+
+---
+
+## Deploy
+
+- Todo merge realizado na branch `main` deve resultar em um deploy para o Firebase Hosting.
+- Antes do deploy, verificar se o projeto compila corretamente.
+- Executar os testes relevantes antes do deploy.
+- Informar claramente os comandos que serão executados.
+- Em caso de falha de build ou testes, interromper o deploy e explicar o motivo.
+- Após o deploy, informar o resultado da publicação e a URL do ambiente publicado.

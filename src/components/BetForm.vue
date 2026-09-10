@@ -3,7 +3,8 @@ import { computed, reactive, watch } from 'vue'
 import { BET_RESULTS, BET_RESULT_LABELS } from '../domain/bet-status.js'
 import { calculateBetReturn } from '../domain/calculations.js'
 
-const props = defineProps({ bet: { type: Object, default: null } })
+const props = defineProps({ bet: { type: Object, default: null }, initialBet: { type: Object, default: null }, pending: Boolean })
+const draftId = props.initialBet?.id ?? crypto.randomUUID()
 const emit = defineEmits(['save', 'cancel'])
 
 function getLocalDate() {
@@ -26,7 +27,7 @@ const hasValidNumbers = computed(() => Number(form.odd) > 0 && Number(form.stake
 const projectedReturn = computed(() => hasValidNumbers.value ? calculateBetReturn(form) : 0)
 const isEditing = computed(() => Boolean(props.bet))
 
-watch(() => props.bet, (bet) => {
+watch(() => props.bet ?? props.initialBet, (bet) => {
   form.betDate = bet?.betDate ?? today
   form.odd = bet?.odd ?? ''
   form.stake = bet?.stake ?? ''
@@ -35,10 +36,10 @@ watch(() => props.bet, (bet) => {
 }, { immediate: true })
 
 function saveBet() {
-  if (!hasValidNumbers.value || !form.betDate) return
+  if (props.pending || !hasValidNumbers.value || !form.betDate) return
 
   emit('save', {
-    id: props.bet?.id ?? crypto.randomUUID(),
+    id: props.bet?.id ?? draftId,
     betDate: form.betDate,
     odd: Number(form.odd),
     stake: Number(form.stake),
@@ -46,31 +47,26 @@ function saveBet() {
     result: form.result
   })
 
-  if (!isEditing.value) {
-    form.odd = ''
-    form.stake = ''
-    form.result = BET_RESULTS.IN_PROGRESS
-  }
 }
 </script>
 
 <template>
-  <form class="bet-form" @submit.prevent="saveBet">
+  <form class="bet-form" :aria-busy="pending" @submit.prevent="saveBet">
     <label>
       <span>Data da entrada</span>
       <span class="date-control">
-        <input v-model="form.betDate" type="date" required />
+        <input :disabled="pending" v-model="form.betDate" type="date" required />
       </span>
     </label>
 
     <div class="field-grid">
       <label>
         <span>ODD</span>
-        <input v-model="form.odd" inputmode="decimal" min="1.01" step="0.001" type="number" placeholder="Ex.: 1,80" required />
+        <input :disabled="pending" v-model="form.odd" inputmode="decimal" min="1.01" step="0.001" type="number" placeholder="Ex.: 1,80" required />
       </label>
       <label>
         <span>Valor da aposta</span>
-        <input v-model="form.stake" inputmode="decimal" min="0.01" step="0.01" type="number" placeholder="Ex.: 7,00" required />
+        <input :disabled="pending" v-model="form.stake" inputmode="decimal" min="0.01" step="0.01" type="number" placeholder="Ex.: 7,00" required />
       </label>
     </div>
 
@@ -79,6 +75,7 @@ function saveBet() {
         <span id="taken-label">Entrada realizada?</span>
         <button
           class="toggle-control"
+          :disabled="pending"
           :aria-checked="form.wasTaken"
           aria-labelledby="taken-label"
           role="switch"
@@ -92,7 +89,7 @@ function saveBet() {
 
       <label>
         <span>Resultado da aposta</span>
-        <select v-model="form.result">
+        <select :disabled="pending" v-model="form.result">
           <option v-for="option in resultOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
         </select>
       </label>
@@ -104,8 +101,8 @@ function saveBet() {
     </div>
 
     <div class="form-actions">
-      <button v-if="isEditing" class="secondary-button" type="button" @click="emit('cancel')">Cancelar</button>
-      <button class="primary-button" type="submit" :disabled="!hasValidNumbers">{{ isEditing ? 'Salvar alterações' : 'Salvar entrada' }}</button>
+      <button v-if="isEditing" class="secondary-button" :disabled="pending" type="button" @click="emit('cancel')">Cancelar</button>
+      <button class="primary-button" type="submit" :disabled="pending || !hasValidNumbers">{{ pending ? 'Salvando…' : isEditing ? 'Salvar alterações' : 'Salvar entrada' }}</button>
     </div>
   </form>
 </template>

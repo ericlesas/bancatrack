@@ -21,6 +21,7 @@ export function observeBets(userId, onBets, onError) {
   return onSnapshot(betsQuery, { includeMetadataChanges: true }, (snapshot) => {
     const bets = snapshot.docs.map((document) => ({ id: document.id, ...document.data() }))
     onBets(bets, {
+      pendingIds: snapshot.docs.filter((document) => document.metadata.hasPendingWrites).map((document) => document.id),
       fromCache: snapshot.metadata.fromCache,
       hasPendingWrites: snapshot.metadata.hasPendingWrites
     })

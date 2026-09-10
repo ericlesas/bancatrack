@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { BET_RESULT_LABELS } from '../domain/bet-status.js'
 import { calculateDailyResults } from '../domain/calculations.js'
 
-const props = defineProps({ bets: { type: Array, required: true } })
+const props = defineProps({ bets: { type: Array, required: true }, deletingIds: { type: Array, default: () => [] }, busy: Boolean })
 const emit = defineEmits(['remove', 'edit'])
 const dailyResults = computed(() => calculateDailyResults(props.bets))
 
@@ -13,7 +13,7 @@ const formatDate = (date) => new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full
 
 <template>
   <section class="history-list" aria-label="Histórico de entradas">
-    <p v-if="!dailyResults.length" class="empty-state">Nenhuma entrada cadastrada nesta sessão.</p>
+    <p v-if="!dailyResults.length" class="empty-state">Nenhuma entrada encontrada para os filtros selecionados.</p>
 
     <article v-for="day in dailyResults" :key="day.date" class="day-group">
       <header>
@@ -28,7 +28,7 @@ const formatDate = (date) => new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full
           </div>
           <div class="bet-return">
             <strong :class="bet.netReturn < 0 ? 'negative' : 'positive'">{{ formatCurrency(bet.netReturn) }}</strong>
-            <span class="row-actions"><button type="button" :aria-label="`Editar entrada com ODD ${bet.odd}`" @click="emit('edit', bet)">Editar</button><button type="button" :aria-label="`Excluir entrada com ODD ${bet.odd}`" @click="emit('remove', bet.id)">Excluir</button></span>
+            <span class="row-actions"><button :disabled="busy" type="button" :aria-label="`Editar entrada com ODD ${bet.odd}`" @click="emit('edit', bet)">Editar</button><button :disabled="busy" type="button" :aria-label="`Excluir entrada com ODD ${bet.odd}`" @click="emit('remove', bet)">{{ deletingIds.includes(bet.id) ? 'Excluindo…' : 'Excluir' }}</button></span>
           </div>
         </li>
       </ul>
