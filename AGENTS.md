@@ -109,8 +109,8 @@ Ao receber uma tarefa:
 
 ## Próximas mudanças
 
-### 1. Qualidade e segurança
-
-- Revisar o comportamento offline do PWA em dispositivos móveis.
-- Verificar como o app se comporta sem conexão durante leitura e escrita de dados.
-- Identificar riscos de inconsistência entre estado local e Firebase.
+- Evoluir o dashboard com base no uso real: Comparar mês atual versus mês anterior; Melhor leitura do gráfico em períodos maiores; Manter apenas indicadores que realmente ajudem suas decisões.
+- Configurações de conta: Alterar senha; Encerrar sessão; Excluir a conta/dados.
+- Revisar nome/ícones, compartilhamento do link e uma política mínima de privacidade caso o app seja disponibilizado a outras pessoas.
+- Adicionar exportação dos dados (verificar se existe na versão free de outros produtos similares).
+- Melhorar o lançamento de entradas: Atalhos para datas comuns, como “Hoje”; Atualização rápida de apostas “Em andamento” para “Ganha” ou “Perdida”.
