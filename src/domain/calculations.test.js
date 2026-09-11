@@ -7,6 +7,7 @@ import {
   calculateDashboardMetrics,
   calculateDailyResults,
   calculateMonthlyResults,
+  enrichBet,
   filterBetsByMonth
 } from './calculations.js'
 
@@ -78,5 +79,87 @@ describe('regras extraídas da planilha', () => {
     const bets = [takenGreen(1.8, 7, '2025-02-19'), takenGreen(1.8, 7, '2025-03-01')]
     expect(filterBetsByMonth(bets, '2025-02')).toEqual([bets[0]])
     expect(filterBetsByMonth(bets, '')).toEqual(bets)
+  })
+
+  it('retorna estruturas vazias e métricas zeradas quando não há entradas', () => {
+    expect(calculateDailyResults([])).toEqual([])
+    expect(calculateMonthlyResults([])).toEqual([])
+    expect(calculateAccumulatedResult([])).toBe(0)
+    expect(calculateDashboardMetrics([])).toEqual({
+      taken: 0,
+      green: 0,
+      red: 0,
+      settled: 0,
+      settledStake: 0,
+      netResult: 0,
+      winRate: 0,
+      roi: 0
+    })
+  })
+
+  it('enriquece a entrada sem modificar o objeto original', () => {
+    const bet = takenGreen(1.75, 12)
+    const enriched = enrichBet(bet)
+    expect(enriched).toEqual({ ...bet, netReturn: 9 })
+    expect(enriched).not.toBe(bet)
+    expect(bet).not.toHaveProperty('netReturn')
+  })
+
+  it('arredonda resultados monetários em até três casas decimais', () => {
+    expect(calculateBetReturn(takenGreen(1.3333, 3))).toBe(1)
+    expect(calculateAccumulatedResult([
+      takenGreen(1.5555, 3),
+      takenGreen(1.5555, 3)
+    ])).toBe(3.334)
+  })
+
+  it('agrupa vários dias e meses em ordem decrescente', () => {
+    const bets = [
+      takenGreen(2, 10, '2025-01-31'),
+      { ...takenGreen(2, 10, '2025-02-01'), result: BET_RESULTS.RED },
+      takenGreen(1.5, 10, '2025-02-02')
+    ]
+    expect(calculateDailyResults(bets).map(({ date }) => date)).toEqual([
+      '2025-02-02', '2025-02-01', '2025-01-31'
+    ])
+    expect(calculateMonthlyResults(bets)).toEqual([
+      { month: '2025-02', netResult: -5, days: 2 },
+      { month: '2025-01', netResult: 10, days: 1 }
+    ])
+  })
+
+  it('ignora void, em andamento e não realizadas nas métricas finalizadas', () => {
+    const bets = [
+      { ...takenGreen(2, 10), result: BET_RESULTS.VOID },
+      { ...takenGreen(2, 10), result: BET_RESULTS.IN_PROGRESS },
+      { ...takenGreen(2, 10), wasTaken: false },
+      { ...takenGreen(2, 10), result: 'resultado_desconhecido' }
+    ]
+    expect(calculateDashboardMetrics(bets)).toEqual({
+      taken: 3,
+      green: 0,
+      red: 0,
+      settled: 0,
+      settledStake: 0,
+      netResult: 0,
+      winRate: 0,
+      roi: 0
+    })
+  })
+
+  it('calcula ROI e taxa de acerto com valores não inteiros', () => {
+    const bets = [
+      takenGreen(1.5, 10),
+      takenGreen(2, 20),
+      { ...takenGreen(1.8, 10), result: BET_RESULTS.RED }
+    ]
+    const metrics = calculateDashboardMetrics(bets)
+    expect(metrics).toMatchObject({
+      settled: 3,
+      settledStake: 40,
+      netResult: 15,
+      roi: 37.5
+    })
+    expect(metrics.winRate).toBeCloseTo(200 / 3)
   })
 })

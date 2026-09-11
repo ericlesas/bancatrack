@@ -111,8 +111,6 @@ Ao receber uma tarefa:
 
 ### 1. Qualidade e segurança
 
-- Ampliar a cobertura de testes das regras de negócio.
-- Priorizar testes de cálculos, cadastro, edição e exclusão de entradas.
 - Revisar o comportamento offline do PWA em dispositivos móveis.
 - Verificar como o app se comporta sem conexão durante leitura e escrita de dados.
 - Identificar riscos de inconsistência entre estado local e Firebase.

@@ -40,10 +40,10 @@ beforeEach(() => {
   state = app.mount(node()).$.setupState
   auth({ uid: 'user-1' })
 })
+
 afterEach(() => { app.unmount(); vi.unstubAllGlobals() })
 
 describe('ações de entradas', () => {
-
   it('cancela a exclusão sem chamar a persistência', async () => {
     window.confirm.mockReturnValue(false)
     await state.removeBet(bet)
@@ -69,6 +69,14 @@ describe('ações de entradas', () => {
     snapshot([], { pendingIds: [] })
     expect(state.deletingIds).toEqual([])
     write.resolve(); await task
+  })
+
+  it('conclui a exclusão quando o servidor responde antes do snapshot', async () => {
+    removeBet.mockResolvedValue()
+    await state.removeBet(bet)
+    expect(removeBet).toHaveBeenCalledWith('user-1', bet.id)
+    expect(state.deletingIds).toEqual([])
+    expect(state.actionErrors).toEqual([])
   })
 
   it('impede envio duplicado e mantém o formulário quando a gravação falha', async () => {
@@ -97,6 +105,15 @@ describe('ações de entradas', () => {
     expect(state.editingBet).toBeNull()
   })
 
+  it('conclui o cadastro quando o servidor responde antes do snapshot', async () => {
+    createBet.mockResolvedValue()
+    await state.addBet(bet)
+    expect(createBet).toHaveBeenCalledWith('user-1', bet)
+    expect(state.saving).toBe(false)
+    expect(state.restoredBet).toEqual({ betDate: bet.betDate, wasTaken: bet.wasTaken })
+    expect(state.actionErrors).toEqual([])
+  })
+
   it('retorna ao histórico após edição aplicada e ignora snapshots antigos', async () => {
     const write = deferred(); updateBet.mockReturnValue(write.promise)
     await state.editBet(bet)
@@ -106,6 +123,36 @@ describe('ações de entradas', () => {
     snapshot([{ ...bet, stake: 20 }], { pendingIds: [bet.id] })
     expect(state.activeView).toBe('history')
     write.resolve(); await task
+  })
+
+  it('mantém a edição aberta quando a atualização falha antes do snapshot local', async () => {
+    updateBet.mockRejectedValue({ code: 'invalid-argument' })
+    await state.editBet(bet)
+    await state.addBet({ ...bet, stake: 0 })
+    expect(state.activeView).toBe('entry')
+    expect(state.editingBet).toEqual(bet)
+    expect(state.saving).toBe(false)
+    expect(state.actionErrors[0].message).toContain('Confira a data')
+  })
+
+  it('não executa ações de persistência sem usuário autenticado', async () => {
+    auth(null)
+    await state.addBet(bet)
+    await state.removeBet(bet)
+    expect(createBet).not.toHaveBeenCalled()
+    expect(updateBet).not.toHaveBeenCalled()
+    expect(removeBet).not.toHaveBeenCalled()
+  })
+
+  it('mantém o erro quando a recuperação é cancelada sobre outro formulário', () => {
+    const failure = { id: 'failure-1', bet, kind: 'create', message: 'Falha' }
+    state.actionErrors = [failure]
+    state.openNewEntry()
+    window.confirm.mockReturnValue(false)
+    state.restoreFailedEntry(failure)
+    expect(window.confirm).toHaveBeenCalled()
+    expect(state.actionErrors).toEqual([failure])
+    expect(state.restoredBet).toBeNull()
   })
 
   it('não aplica falhas de uma sessão anterior ao próximo usuário', async () => {
@@ -149,6 +196,34 @@ describe('ações de entradas', () => {
     formState.saveBet()
     expect(formState.form.stake).toBe(10)
     expect(save.mock.calls[0][0].id).toBe(save.mock.calls[1][0].id)
+    formApp.unmount()
+  })
+
+  it('formata o valor da aposta em BRL durante a digitação', () => {
+    const formApp = renderer.createApp({ ...BetForm, render: () => null })
+    formApp.provide(ssrContextKey, {})
+    const formState = formApp.mount(node()).$.setupState
+    formState.updateStake({ target: { value: '1' } })
+    expect(formState.form.stake).toBe(0.01)
+    expect(formState.formatStake(formState.form.stake)).toBe('R$ 0,01')
+    formState.updateStake({ target: { value: 'R$ 1.234,56' } })
+    expect(formState.form.stake).toBe(1234.56)
+    expect(formState.formatStake(formState.form.stake)).toBe('R$ 1.234,56')
+    formState.updateStake({ target: { value: '' } })
+    expect(formState.form.stake).toBe('')
+    expect(formState.formatStake(formState.form.stake)).toBe('')
+    formApp.unmount()
+  })
+
+  it('carrega e envia o valor monetário editado como número', () => {
+    const save = vi.fn()
+    const formApp = renderer.createApp({ ...BetForm, render: () => null }, { bet, onSave: save })
+    formApp.provide(ssrContextKey, {})
+    const formState = formApp.mount(node()).$.setupState
+    expect(formState.formatStake(formState.form.stake)).toBe('R$ 10,00')
+    formState.updateStake({ target: { value: 'R$ 25,90' } })
+    formState.saveBet()
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({ stake: 25.9 }))
     formApp.unmount()
   })
 })

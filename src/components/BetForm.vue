@@ -23,9 +23,19 @@ const form = reactive({
 })
 
 const resultOptions = Object.entries(BET_RESULT_LABELS).map(([value, label]) => ({ value, label }))
+const brlFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 const hasValidNumbers = computed(() => Number(form.odd) > 0 && Number(form.stake) > 0)
 const projectedReturn = computed(() => hasValidNumbers.value ? calculateBetReturn(form) : 0)
 const isEditing = computed(() => Boolean(props.bet))
+
+function formatStake(value) {
+  return value === '' || value == null ? '' : brlFormatter.format(Number(value))
+}
+
+function updateStake(event) {
+  const digits = event.target.value.replace(/\D/g, '')
+  form.stake = digits ? Number(digits) / 100 : ''
+}
 
 watch(() => props.bet ?? props.initialBet, (bet) => {
   form.betDate = bet?.betDate ?? today
@@ -66,7 +76,7 @@ function saveBet() {
       </label>
       <label>
         <span>Valor da aposta</span>
-        <input :disabled="pending" v-model="form.stake" inputmode="decimal" min="0.01" step="0.01" type="number" placeholder="Ex.: 7,00" required />
+        <input :disabled="pending" :value="formatStake(form.stake)" inputmode="numeric" type="text" placeholder="R$ 0,00" required @input="updateStake" />
       </label>
     </div>
 
