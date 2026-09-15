@@ -2,10 +2,12 @@
 import { computed } from 'vue'
 import { BET_RESULT_LABELS } from '../domain/bet-status.js'
 import { calculateDailyResults } from '../domain/calculations.js'
+import { useProgressiveList } from '../composables/useProgressiveList.js'
 
 const props = defineProps({ bets: { type: Array, required: true }, deletingIds: { type: Array, default: () => [] }, busy: Boolean })
 const emit = defineEmits(['remove', 'edit'])
 const dailyResults = computed(() => calculateDailyResults(props.bets))
+const { visibleItems: visibleDays, hasMore, sentinel } = useProgressiveList(dailyResults, 10)
 
 const formatCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
 const formatDate = (date) => new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full', timeZone: 'UTC' }).format(new Date(`${date}T00:00:00Z`))
@@ -15,7 +17,7 @@ const formatDate = (date) => new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full
   <section class="history-list" aria-label="Histórico de entradas">
     <p v-if="!dailyResults.length" class="empty-state">Nenhuma entrada encontrada para os filtros selecionados.</p>
 
-    <article v-for="day in dailyResults" :key="day.date" class="day-group">
+    <article v-for="day in visibleDays" :key="day.date" class="day-group">
       <header>
         <div><strong>{{ formatDate(day.date) }}</strong><span>{{ day.bets.length }} entrada(s)</span></div>
         <strong :class="day.netResult < 0 ? 'negative' : 'positive'">{{ formatCurrency(day.netResult) }}</strong>
@@ -33,5 +35,6 @@ const formatDate = (date) => new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full
         </li>
       </ul>
     </article>
+    <p v-if="hasMore" ref="sentinel" class="scroll-hint">Mais entradas serão carregadas ao continuar</p>
   </section>
 </template>

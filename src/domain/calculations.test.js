@@ -8,7 +8,8 @@ import {
   calculateDailyResults,
   calculateMonthlyResults,
   enrichBet,
-  filterBetsByMonth
+  filterBetsByMonth,
+  filterMonthlyResultsByPeriod
 } from './calculations.js'
 
 const takenGreen = (odd, stake, betDate = '2025-02-19') => ({ odd, stake, betDate, wasTaken: true, result: BET_RESULTS.GREEN })
@@ -79,6 +80,16 @@ describe('regras extraídas da planilha', () => {
     const bets = [takenGreen(1.8, 7, '2025-02-19'), takenGreen(1.8, 7, '2025-03-01')]
     expect(filterBetsByMonth(bets, '2025-02')).toEqual([bets[0]])
     expect(filterBetsByMonth(bets, '')).toEqual(bets)
+  })
+
+  it('filtra o gráfico por uma janela real de meses do calendário', () => {
+    const results = [
+      { month: '2026-09' }, { month: '2026-08' }, { month: '2026-04' },
+      { month: '2026-03' }, { month: '2025-09' }
+    ]
+    expect(filterMonthlyResultsByPeriod(results, '2026-09', '6')).toEqual(results.slice(0, 3))
+    expect(filterMonthlyResultsByPeriod(results, '2026-09', '12')).toEqual(results.slice(0, 4))
+    expect(filterMonthlyResultsByPeriod(results, '2026-09', 'all')).toBe(results)
   })
 
   it('retorna estruturas vazias e métricas zeradas quando não há entradas', () => {

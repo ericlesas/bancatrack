@@ -7,7 +7,7 @@ import BetFilters from './components/BetFilters.vue'
 import BetForm from './components/BetForm.vue'
 import BetList from './components/BetList.vue'
 import MonthlyChart from './components/MonthlyChart.vue'
-import { calculateDashboardMetrics, calculateMonthlyResults, filterBetsByMonth } from './domain/calculations.js'
+import { calculateDashboardMetrics, calculateMonthlyResults, filterBetsByMonth, filterMonthlyResultsByPeriod } from './domain/calculations.js'
 import { observeAuth, signIn, signOutUser, signUp } from './services/auth-service.js'
 import { createBet, observeBets, removeBet as deleteBet, updateBet } from './services/bets-repository.js'
 
@@ -16,6 +16,7 @@ const bets = ref([])
 const editingBet = ref(null)
 const filters = ref({ month: '', result: '', wasTaken: '' })
 const dashboardMonth = ref('')
+const chartPeriod = ref('6')
 const user = ref(null)
 const authReady = ref(false)
 const authPending = ref(false)
@@ -81,8 +82,13 @@ function restoreFailedEntry(failure) {
 let stopObservingBets = null
 const availableMonths = computed(() => calculateMonthlyResults(bets.value))
 const dashboardBets = computed(() => filterBetsByMonth(bets.value, dashboardMonth.value))
-const monthlyResults = computed(() => calculateMonthlyResults(dashboardBets.value))
+const monthlyResults = computed(() => calculateMonthlyResults(bets.value))
 const dashboardMetrics = computed(() => calculateDashboardMetrics(dashboardBets.value))
+const currentCalendarMonth = () => {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+}
+const chartResults = computed(() => filterMonthlyResultsByPeriod(monthlyResults.value, currentCalendarMonth(), chartPeriod.value))
 const latestMonth = computed(() => monthlyResults.value[0] ?? null)
 const visibleBets = computed(() => bets.value.filter((bet) => {
   if (filters.value.month && !bet.betDate.startsWith(filters.value.month)) return false
@@ -95,6 +101,10 @@ const formattedResult = (value) => new Intl.NumberFormat('pt-BR', {
 const formattedPercentage = (value) => new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 }).format(value)
 const formatMonth = (month) => new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric', timeZone: 'UTC' })
   .format(new Date(`${month}-01T00:00:00Z`))
+const formatDisplayMonth = (month) => {
+  const formatted = formatMonth(month)
+  return formatted.charAt(0).toUpperCase() + formatted.slice(1)
+}
 
 function friendlyAuthError(error) {
   const messages = {
@@ -243,12 +253,12 @@ onUnmounted(() => {
       <section class="dashboard-period" aria-label="Filtro de período">
         <div>
           <span class="dashboard-period-kicker">Visão do resumo</span>
-          <strong>{{ dashboardMonth ? formatMonth(dashboardMonth) : 'Todo o histórico' }}</strong>
+          <strong>{{ dashboardMonth ? formatDisplayMonth(dashboardMonth) : 'Todo o histórico' }}</strong>
         </div>
         <label>
           <span>Selecionar período</span>
           <select v-model="dashboardMonth">
-            <option value="">Todo o histórico</option>
+            <option value="">todo o histórico</option>
             <option v-for="item in availableMonths" :key="item.month" :value="item.month">{{ formatMonth(item.month) }}</option>
           </select>
         </label>
@@ -271,9 +281,12 @@ onUnmounted(() => {
       </section>
 
       <section class="content-card">
-        <div class="section-heading"><div><h2>Resultados por mês</h2><span v-if="latestMonth" class="section-caption">Último período: {{ formattedResult(latestMonth.netResult) }}</span></div></div>
+        <div class="section-heading chart-heading">
+          <div><h2>Resultados por mês</h2><span v-if="latestMonth" class="section-caption">Último período: {{ formattedResult(latestMonth.netResult) }}</span></div>
+          <label><span>Período do gráfico</span><select v-model="chartPeriod"><option value="6">últimos 6 meses</option><option value="12">últimos 12 meses</option><option value="all">todo o histórico</option></select></label>
+        </div>
         <p v-if="!monthlyResults.length" class="empty-state">Cadastre uma entrada para começar a acompanhar seus resultados.</p>
-        <MonthlyChart v-else :results="monthlyResults" />
+        <MonthlyChart v-else :results="chartResults" />
       </section>
     </section>
 

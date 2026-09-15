@@ -109,7 +109,6 @@ Ao receber uma tarefa:
 
 ## Próximas mudanças
 
-- Evoluir o dashboard com base no uso real: Comparar mês atual versus mês anterior; Melhor leitura do gráfico em períodos maiores; Manter apenas indicadores que realmente ajudem suas decisões.
 - Configurações de conta: Alterar senha; Encerrar sessão; Excluir a conta/dados.
 - Revisar nome/ícones, compartilhamento do link e uma política mínima de privacidade caso o app seja disponibilizado a outras pessoas.
 - Adicionar exportação dos dados (verificar se existe na versão free de outros produtos similares).

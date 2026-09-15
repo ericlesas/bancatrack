@@ -41,7 +41,7 @@ beforeEach(() => {
   auth({ uid: 'user-1' })
 })
 
-afterEach(() => { app.unmount(); vi.unstubAllGlobals() })
+afterEach(() => { app.unmount(); vi.useRealTimers(); vi.unstubAllGlobals() })
 
 describe('ações de entradas', () => {
   it('cancela a exclusão sem chamar a persistência', async () => {
@@ -184,6 +184,20 @@ describe('ações de entradas', () => {
     const version = state.formVersion
     state.openNewEntry()
     expect(state.formVersion).toBe(version)
+  })
+
+  it('mantém o gráfico independente do filtro do dashboard', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-09-14T12:00:00'))
+    const previousBet = { ...bet, id: 'bet-previous', betDate: '2026-08-08', result: 'red' }
+    const oldBet = { ...bet, id: 'bet-old', betDate: '2025-08-08' }
+    snapshot([bet, previousBet, oldBet], { pendingIds: [] })
+    state.dashboardMonth = '2026-09'
+
+    expect(state.dashboardMetrics.netResult).toBe(10)
+    expect(state.chartResults).toHaveLength(2)
+    state.chartPeriod = 'all'
+    expect(state.chartResults).toHaveLength(3)
   })
 
   it('mantém valores e o mesmo identificador ao reenviar o formulário', () => {

@@ -25,3 +25,16 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .action-errors { display: grid; gap: 10px; margin-bottom: 16px; }
 .action-error { padding: 12px; margin-bottom: 12px; border: 1px solid #8a4949; border-radius: 10px; }
 .action-error .text-button { margin-top: 8px; margin-right: 12px; }
+
+/* Dashboard mensal */
+.dashboard-period strong { text-transform: none; }
+.dashboard-period select, .chart-heading select, .filter-grid select { text-transform: lowercase; }
+.chart-heading label > span { color: #a7c2ae; font-size: .75rem; }
+.chart-heading label { display: grid; gap: 5px; min-width: 160px; }
+.chart-heading select { min-height: 38px; border: 1px solid #416c4c; border-radius: 9px; padding: 7px; color: #edf7ef; background: #101f15; }
+.scroll-hint { margin: 16px 0 4px; color: #a7c2ae; font-size: .75rem; text-align: center; }
+
+@media (max-width: 460px) {
+  .chart-heading { align-items: flex-start; }
+  .chart-heading label { min-width: 145px; }
+}

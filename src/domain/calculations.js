@@ -73,6 +73,16 @@ export function filterBetsByMonth(bets, month) {
   return month ? bets.filter((bet) => bet.betDate.startsWith(month)) : bets
 }
 
+export function filterMonthlyResultsByPeriod(results, referenceMonth, period) {
+  if (period === 'all') return results
+
+  const [year, monthNumber] = referenceMonth.split('-').map(Number)
+  const firstMonth = new Date(Date.UTC(year, monthNumber - Number(period), 1))
+  const cutoff = `${firstMonth.getUTCFullYear()}-${String(firstMonth.getUTCMonth() + 1).padStart(2, '0')}`
+
+  return results.filter((item) => item.month >= cutoff && item.month <= referenceMonth)
+}
+
 export function calculateDashboardMetrics(bets) {
   const indicators = calculateBetIndicators(bets)
   const settledBets = bets.filter((bet) => bet.wasTaken && [BET_RESULTS.GREEN, BET_RESULTS.RED].includes(bet.result))
