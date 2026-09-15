@@ -113,3 +113,10 @@ Ao receber uma tarefa:
 - Revisar nome/ícones, compartilhamento do link e uma política mínima de privacidade caso o app seja disponibilizado a outras pessoas.
 - Adicionar exportação dos dados (verificar se existe na versão free de outros produtos similares).
 - Melhorar o lançamento de entradas: Atalhos para datas comuns, como “Hoje”; Atualização rápida de apostas “Em andamento” para “Ganha” ou “Perdida”.
+
+## Pendências da feature de configurações de conta
+
+- A interface e os fluxos disponíveis foram validados pelo usuário no preview com conta de teste.
+- Por decisão do usuário, manter temporariamente a redefinição de senha na página padrão do Firebase. A alteração da URL acionável para `https://bancatrack-8c7c9.web.app/reset-password` aguarda o suporte, devido ao erro `EMAIL_TEMPLATE_UPDATE_NOT_ALLOWED`. Não ativar a URL personalizada antes de publicar e validar a página.
+- Quando o suporte liberar a alteração, revisar os modos de ação de e-mail: a URL personalizada é compartilhada entre templates, mas a página atual trata apenas `resetPassword`. Prever tratamento para `verifyEmail` e `recoverEmail` antes da ativação e testar o fluxo completo por e-mail.
+- A exclusão ainda precisa de proteção no servidor contra gravações simultâneas de outras abas/dispositivos. O bloqueio atual é local; revisar regras do Firestore e estratégia de exclusão antes de considerar essa proteção concluída.

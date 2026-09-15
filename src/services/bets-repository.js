@@ -1,4 +1,5 @@
 import {
+  getDocsFromServer, limit, writeBatch,
   collection,
   deleteDoc,
   doc,
@@ -53,4 +54,15 @@ export function updateBet(userId, bet) {
 
 export function removeBet(userId, betId) {
   return deleteDoc(doc(db, 'users', userId, 'bets', betId))
+}
+
+export async function removeAllUserData(userId) {
+  while (true) {
+    const snapshot = await getDocsFromServer(query(betsCollection(userId), limit(400)))
+    if (snapshot.empty) break
+    const batch = writeBatch(db)
+    snapshot.docs.forEach((item) => batch.delete(item.ref))
+    await batch.commit()
+  }
+  await deleteDoc(doc(db, 'users', userId))
 }

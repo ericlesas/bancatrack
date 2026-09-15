@@ -1,6 +1,9 @@
 <script setup>
 import { computed, nextTick, onUnmounted, ref } from 'vue'
 import { betErrorMessage } from './services/bet-errors.js'
+import AccountSettings from './components/AccountSettings.vue'
+import ResetPassword from './components/ResetPassword.vue'
+import { authErrorMessage } from './services/auth-errors.js'
 import AuthForm from './components/AuthForm.vue'
 import AppSplash from './components/AppSplash.vue'
 import BetFilters from './components/BetFilters.vue'
@@ -8,10 +11,51 @@ import BetForm from './components/BetForm.vue'
 import BetList from './components/BetList.vue'
 import MonthlyChart from './components/MonthlyChart.vue'
 import { calculateDashboardMetrics, calculateMonthlyResults, filterBetsByMonth, filterMonthlyResultsByPeriod } from './domain/calculations.js'
-import { observeAuth, signIn, signOutUser, signUp } from './services/auth-service.js'
-import { createBet, observeBets, removeBet as deleteBet, updateBet } from './services/bets-repository.js'
+import { observeAuth, signIn, signOutUser, signUp, changePassword, reauthenticate, deleteAuthenticatedUser, requestPasswordReset } from './services/auth-service.js'
+import { createBet, observeBets, removeAllUserData, removeBet as deleteBet, updateBet } from './services/bets-repository.js'
 
 const activeView = ref('dashboard')
+const actionParams = new URLSearchParams(window.location?.search || '')
+const resetPage = ref(window.location?.pathname === '/reset-password' || actionParams.has('mode'))
+const accountPending = ref(false)
+const accountError = ref('')
+const accountMessage = ref('')
+const authMessage = ref('')
+function closeResetPage() {
+  resetPage.value = false
+  window.history.replaceState({}, '', '/')
+}
+async function recoverPassword(email) {
+  if (authPending.value) return
+  authError.value = authMessage.value = ''
+  authPending.value = true
+  try { await requestPasswordReset(email); authMessage.value = 'Se houver uma conta com esse e-mail, você receberá um link para redefinir a senha.' }
+  catch (error) { authError.value = authErrorMessage(error) }
+  finally { authPending.value = false }
+}
+async function accountAction(action, success = '') {
+  if (busy.value) return
+  accountPending.value = true
+  accountError.value = accountMessage.value = ''
+  try { await action(); accountMessage.value = success }
+  catch (error) { accountError.value = error.accountMessage || authErrorMessage(error) }
+  finally { accountPending.value = false }
+}
+function updateAccountPassword(credentials) {
+  return accountAction(() => changePassword(credentials.currentPassword, credentials.newPassword), 'Senha atualizada com sucesso.')
+}
+function logout() { return accountAction(signOutUser) }
+function deleteAccount(password) {
+  return accountAction(async () => {
+    const authenticatedUser = await reauthenticate(password)
+    try {
+      await removeAllUserData(authenticatedUser.uid)
+      await deleteAuthenticatedUser(authenticatedUser)
+    } catch (error) {
+      throw { accountMessage: 'A exclusão não foi concluída. Alguns dados podem já ter sido apagados. Confira sua conexão e tente novamente. ' + authErrorMessage(error) }
+    }
+  })
+}
 const bets = ref([])
 const editingBet = ref(null)
 const filters = ref({ month: '', result: '', wasTaken: '' })
@@ -30,7 +74,7 @@ const formVersion = ref(0)
 const restoredBet = ref(null)
 const operations = new Set()
 let sessionVersion = 0
-const busy = computed(() => saving.value || deletingIds.value.length > 0)
+const busy = computed(() => accountPending.value || saving.value || deletingIds.value.length > 0)
 
 // O snapshot local libera a interface; a Promise continua tratando a confirmação remota.
 function finishLocal(operation) {
@@ -198,6 +242,8 @@ function cancelEditing() {
 }
 
 const stopObservingAuth = observeAuth((firebaseUser) => {
+  activeView.value = 'dashboard'
+  accountError.value = accountMessage.value = ''
   sessionVersion += 1
   operations.clear()
   saving.value = false
@@ -225,15 +271,23 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <AppSplash v-if="!authReady" />
-  <AuthForm v-else-if="!user" :error="authError" :pending="authPending" @sign-in="authenticate(signIn, $event)" @sign-up="authenticate(signUp, $event)" />
+  <ResetPassword v-if="resetPage" :code="actionParams.get('oobCode')" :mode="actionParams.get('mode')" @back="closeResetPage" />
+  <AppSplash v-else-if="!authReady" />
+  <AuthForm v-else-if="!user" :error="authError" :message="authMessage" @clear="authError = authMessage = ''" @reset="recoverPassword" :pending="authPending" @sign-in="authenticate(signIn, $event)" @sign-up="authenticate(signUp, $event)" />
   <main v-else class="app-shell">
-    <header class="topbar">
+    <header v-if="activeView !== 'account'" class="topbar">
       <div>
         <h1>BancaTrack</h1>
         <p class="app-subtitle">Gestão inteligente de apostas</p>
       </div>
-      <div class="header-actions"><button class="sign-out" type="button" @click="signOutUser">Sair</button></div>
+      <div class="header-actions">
+        <button class="settings-button" type="button" :disabled="busy" aria-label="Configurações da conta" title="Configurações da conta" :aria-pressed="activeView === 'account'" @click="activeView = 'account'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <path d="m9.5 3-.5 2-2 1-2-.5-2 3.5L4.5 11v2L3 15l2 3.5 2-.5 2 1 .5 2h5l.5-2 2-1 2 .5 2-3.5-1.5-2v-2L21 9l-2-3.5-2 .5-2-1-.5-2z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+        </button>
+      </div>
     </header>
 
     <div v-if="actionErrors.length" class="action-errors">
@@ -249,6 +303,8 @@ onUnmounted(() => {
       <button class="text-button" @click="startBetsObserver(user)">Tentar novamente</button>
     </div>
 
+    <p v-if="accountError && activeView !== 'account'" class="form-error" role="alert">{{ accountError }}</p>
+    <AccountSettings v-if="activeView === 'account'" :email="user.email" :pending="busy" :error="accountError" :message="accountMessage" @clear="accountError = accountMessage = ''" @password="updateAccountPassword" @delete="deleteAccount" @logout="logout" @back="activeView = 'dashboard'" />
     <section v-if="activeView === 'dashboard' && !betsLoading && !loadError" class="dashboard" aria-label="Resumo">
       <section class="dashboard-period" aria-label="Filtro de período">
         <div>
@@ -301,7 +357,7 @@ onUnmounted(() => {
       <BetList :bets="visibleBets" :deleting-ids="deletingIds" :busy="busy" @edit="editBet" @remove="removeBet" />
     </section>
 
-    <nav class="bottom-nav" aria-label="Navegação principal">
+    <nav v-if="activeView !== 'account'" class="bottom-nav" aria-label="Navegação principal">
       <button :disabled="busy" :class="{ active: activeView === 'dashboard' }" @click="activeView = 'dashboard'">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
           <path d="M4 4v16h16M8 16v-4m5 4V8m5 8V5" />

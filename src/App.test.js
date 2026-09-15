@@ -2,11 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createRenderer, nextTick, ssrContextKey } from 'vue'
 import App from './App.vue'
 import BetForm from './components/BetForm.vue'
-import { observeAuth } from './services/auth-service.js'
-import { observeBets, createBet, updateBet, removeBet } from './services/bets-repository.js'
+import { observeAuth, reauthenticate, deleteAuthenticatedUser } from './services/auth-service.js'
+import { observeBets, createBet, updateBet, removeBet, removeAllUserData } from './services/bets-repository.js'
 
-vi.mock('./services/auth-service.js', () => ({ observeAuth: vi.fn(), signIn: vi.fn(), signUp: vi.fn(), signOutUser: vi.fn() }))
-vi.mock('./services/bets-repository.js', () => ({ observeBets: vi.fn(), createBet: vi.fn(), updateBet: vi.fn(), removeBet: vi.fn() }))
+vi.mock('./services/auth-service.js', () => ({ observeAuth: vi.fn(), signIn: vi.fn(), signUp: vi.fn(), signOutUser: vi.fn(), reauthenticate: vi.fn(), deleteAuthenticatedUser: vi.fn(), changePassword: vi.fn(), requestPasswordReset: vi.fn() }))
+vi.mock('./services/bets-repository.js', () => ({ observeBets: vi.fn(), createBet: vi.fn(), updateBet: vi.fn(), removeBet: vi.fn(), removeAllUserData: vi.fn() }))
 
 // Exercita o estado dos componentes com o runtime Vue, sem navegador ou DOM adicional.
 const node = (text = '') => ({ children: [], text, props: {} })
@@ -239,5 +239,30 @@ describe('ações de entradas', () => {
     formState.saveBet()
     expect(save).toHaveBeenCalledWith(expect.objectContaining({ stake: 25.9 }))
     formApp.unmount()
+  })
+})
+
+describe('exclusão da conta', () => {
+  it('mantém a conta quando a exclusão dos dados falha', async () => {
+    reauthenticate.mockResolvedValue({ uid: 'user-1' })
+    removeAllUserData.mockRejectedValueOnce(new Error('offline'))
+    await state.deleteAccount('password')
+    expect(deleteAuthenticatedUser).not.toHaveBeenCalled()
+    expect(state.accountError).toContain('Alguns dados podem já ter sido apagados')
+    expect(state.accountPending).toBe(false)
+  })
+  
+  it('bloqueia novas entradas durante a exclusão e apaga a conta por último', async () => {
+    const deletion = deferred()
+    reauthenticate.mockResolvedValue({ uid: 'user-1' })
+    removeAllUserData.mockReturnValueOnce(deletion.promise)
+    const task = state.deleteAccount('password')
+    await Promise.resolve()
+    await state.addBet(bet)
+    expect(createBet).not.toHaveBeenCalled()
+    expect(deleteAuthenticatedUser).not.toHaveBeenCalled()
+    deletion.resolve()
+    await task
+    expect(deleteAuthenticatedUser).toHaveBeenCalledWith({ uid: 'user-1' })
   })
 })
