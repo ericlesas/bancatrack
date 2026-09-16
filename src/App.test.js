@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createRenderer, nextTick, ssrContextKey } from 'vue'
 import App from './App.vue'
+import PrivacyPolicy from './components/PrivacyPolicy.vue'
 import BetForm from './components/BetForm.vue'
 import { observeAuth, reauthenticate, deleteAuthenticatedUser } from './services/auth-service.js'
 import { observeBets, createBet, updateBet, removeBet, removeAllUserData } from './services/bets-repository.js'
@@ -265,4 +266,23 @@ describe('exclusão da conta', () => {
     await task
     expect(deleteAuthenticatedUser).toHaveBeenCalledWith({ uid: 'user-1' })
   })
+})
+
+it.each(['/privacy', '/privacy/', '/privacy/index.html'])('reconhece a política em %s antes da autenticação', (pathname) => {
+  window.location = { pathname, search: '' }
+  const privacyApp = renderer.createApp({ ...App, render: () => null })
+  privacyApp.provide(ssrContextKey, {})
+  const privacyState = privacyApp.mount(node()).$.setupState
+  expect(privacyState.privacyPage).toBe(true)
+  expect(privacyState.authReady).toBe(false)
+  let html = ''
+  App.ssrRender({ ...privacyState, PrivacyPolicy }, chunk => { html += chunk }, privacyApp._instance, {}, {}, { ...privacyState, PrivacyPolicy }, {}, {})
+  expect(html).toContain('Política de privacidade')
+  expect(html).not.toContain('Entre na sua banca')
+  auth({ uid: 'user-1' })
+  html = ''
+  App.ssrRender({ ...privacyState, PrivacyPolicy }, chunk => { html += chunk }, privacyApp._instance, {}, {}, { ...privacyState, PrivacyPolicy }, {}, {})
+  expect(html).toContain('Política de privacidade')
+  expect(html).not.toContain('Resultado acumulado')
+  privacyApp.unmount()
 })

@@ -12,6 +12,9 @@ function navigate(destination) {
   emit('clear')
   screen.value = destination
 }
+function openPrivacy() {
+  if (!props.pending) window.location.assign('/privacy/')
+}
 function back(event) {
   if (props.pending) return
   event?.currentTarget?.blur()
@@ -52,6 +55,7 @@ function submitDelete() {
     <p v-if="message" class="account-message" role="status">{{ message }}</p>
     <nav v-if="screen === 'menu'" class="account-menu" aria-label="Opções da conta">
       <button class="secondary-button" type="button" :disabled="pending" @click="navigate('password')"><svg class="account-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="5" y="10" width="14" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3" /></svg><span class="account-menu-label">Alterar senha</span><span class="account-menu-chevron" aria-hidden="true">›</span></button>
+      <button class="secondary-button" type="button" :disabled="pending" @click="openPrivacy"><svg class="account-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6z" /><path d="m9 12 2 2 4-4" /></svg><span class="account-menu-label">Política de privacidade</span><span class="account-menu-chevron" aria-hidden="true">›</span></button>
       <button class="secondary-button" type="button" :disabled="pending" @click="navigate('logout')"><svg class="account-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M10 12h11m-4-4 4 4-4 4" /></svg><span class="account-menu-label">Sair</span><span class="account-menu-chevron" aria-hidden="true">›</span></button>
       <button class="secondary-button negative" type="button" :disabled="pending" @click="navigate('delete')"><svg class="account-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7" /></svg><span class="account-menu-label">Excluir conta e dados</span><span class="account-menu-chevron" aria-hidden="true">›</span></button>
     </nav>

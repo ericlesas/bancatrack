@@ -7,6 +7,7 @@ export default defineConfig({
     vue(),
     VitePWA({
       registerType: 'autoUpdate',
+      workbox: { navigateFallbackDenylist: [/^\/privacy(?:\/|$)/] },
       manifest: {
         name: 'BancaTrack',
         short_name: 'BancaTrack',

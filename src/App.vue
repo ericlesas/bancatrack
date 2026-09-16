@@ -2,6 +2,7 @@
 import { computed, nextTick, onUnmounted, ref } from 'vue'
 import { betErrorMessage } from './services/bet-errors.js'
 import AccountSettings from './components/AccountSettings.vue'
+import PrivacyPolicy from './components/PrivacyPolicy.vue'
 import ResetPassword from './components/ResetPassword.vue'
 import { authErrorMessage } from './services/auth-errors.js'
 import AuthForm from './components/AuthForm.vue'
@@ -15,6 +16,7 @@ import { observeAuth, signIn, signOutUser, signUp, changePassword, reauthenticat
 import { createBet, observeBets, removeAllUserData, removeBet as deleteBet, updateBet } from './services/bets-repository.js'
 
 const activeView = ref('dashboard')
+const privacyPage = /^\/privacy(?:\/index\.html|\/)?$/.test(window.location?.pathname || '')
 const actionParams = new URLSearchParams(window.location?.search || '')
 const resetPage = ref(window.location?.pathname === '/reset-password' || actionParams.has('mode'))
 const accountPending = ref(false)
@@ -271,7 +273,8 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <ResetPassword v-if="resetPage" :code="actionParams.get('oobCode')" :mode="actionParams.get('mode')" @back="closeResetPage" />
+  <PrivacyPolicy v-if="privacyPage" />
+  <ResetPassword v-else-if="resetPage" :code="actionParams.get('oobCode')" :mode="actionParams.get('mode')" @back="closeResetPage" />
   <AppSplash v-else-if="!authReady" />
   <AuthForm v-else-if="!user" :error="authError" :message="authMessage" @clear="authError = authMessage = ''" @reset="recoverPassword" :pending="authPending" @sign-in="authenticate(signIn, $event)" @sign-up="authenticate(signUp, $event)" />
   <main v-else class="app-shell">

@@ -40,6 +40,7 @@ function submit() {
         {{ mode === 'sign-in' ? 'Ainda não tenho conta' : 'Já tenho uma conta' }}
       </button>
       <button v-if="mode === 'sign-in'" class="text-button" type="button" :disabled="pending" @click="emit('clear'); password = ''; mode = 'reset'">Esqueci minha senha</button>
+      <a class="privacy-link" href="/privacy/">Política de privacidade</a>
     </section>
   </main>
 </template>
