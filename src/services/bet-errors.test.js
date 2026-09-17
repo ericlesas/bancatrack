@@ -5,6 +5,7 @@ describe('mensagens de erro de entradas', () => {
   it('distingue a operação e traduz códigos com prefixo', () => {
     expect(betErrorMessage({ code: 'firestore/permission-denied' }, 'delete')).toContain('excluir a entrada. Sua conta não tem permissão')
     expect(betErrorMessage({ code: 'not-found' }, 'edit')).toContain('Esta entrada não está mais disponível')
+    expect(betErrorMessage({ code: 'unavailable' }, 'result')).toContain('atualizar o resultado')
   })
   
   it('não expõe detalhes internos nem promete nova tentativa automática', () => {

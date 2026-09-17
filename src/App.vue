@@ -11,6 +11,7 @@ import BetFilters from './components/BetFilters.vue'
 import BetForm from './components/BetForm.vue'
 import BetList from './components/BetList.vue'
 import MonthlyChart from './components/MonthlyChart.vue'
+import { BET_RESULTS } from './domain/bet-status.js'
 import { calculateDashboardMetrics, calculateMonthlyResults, filterBetsByMonth, filterMonthlyResultsByPeriod } from './domain/calculations.js'
 import { observeAuth, signIn, signOutUser, signUp, changePassword, reauthenticate, deleteAuthenticatedUser, requestPasswordReset } from './services/auth-service.js'
 import { createBet, observeBets, removeAllUserData, removeBet as deleteBet, updateBet } from './services/bets-repository.js'
@@ -72,11 +73,12 @@ const actionErrors = ref([])
 const betsLoading = ref(true)
 const saving = ref(false)
 const deletingIds = ref([])
+const updatingIds = ref([])
 const formVersion = ref(0)
 const restoredBet = ref(null)
 const operations = new Set()
 let sessionVersion = 0
-const busy = computed(() => accountPending.value || saving.value || deletingIds.value.length > 0)
+const busy = computed(() => accountPending.value || saving.value || deletingIds.value.length > 0 || updatingIds.value.length > 0)
 
 // O snapshot local libera a interface; a Promise continua tratando a confirmação remota.
 function finishLocal(operation) {
@@ -84,6 +86,8 @@ function finishLocal(operation) {
   operation.local = true
   if (operation.kind === 'delete') {
     deletingIds.value = deletingIds.value.filter((id) => id !== operation.bet.id)
+  } else if (operation.kind === 'result') {
+    updatingIds.value = updatingIds.value.filter((id) => id !== operation.bet.id)
   } else {
     saving.value = false
     editingBet.value = null
@@ -104,13 +108,14 @@ async function performOperation(kind, bet, write) {
     actionErrors.value.push({
       id: crypto.randomUUID(),
       message: `${betErrorMessage(error, kind)} Entrada de ${bet.betDate.split('-').reverse().join('/')}, ODD ${bet.odd}, ${formattedResult(bet.stake)}.`,
-      bet: operation.local && kind !== 'delete' ? operation.bet : null,
+      bet: operation.local && (kind === 'create' || kind === 'edit') ? operation.bet : null,
       kind
     })
   } finally {
     operations.delete(operation)
     if (operation.session === sessionVersion) {
       if (kind === 'delete') deletingIds.value = deletingIds.value.filter((id) => id !== bet.id)
+      else if (kind === 'result') updatingIds.value = updatingIds.value.filter((id) => id !== bet.id)
       else if (!operation.local) saving.value = false
     }
   }
@@ -191,6 +196,15 @@ async function removeBet(bet) {
   await performOperation('delete', bet, () => deleteBet(userId, bet.id))
 }
 
+async function updateBetResult({ bet, result }) {
+  if (busy.value || !user.value || !bet.wasTaken || bet.result !== BET_RESULTS.IN_PROGRESS) return
+  if (result !== BET_RESULTS.GREEN && result !== BET_RESULTS.RED) return
+  const updatedBet = { ...bet, result }
+  const userId = user.value.uid
+  updatingIds.value = [...updatingIds.value, bet.id]
+  await performOperation('result', updatedBet, () => updateBet(userId, updatedBet))
+}
+
 function startBetsObserver(firebaseUser) {
   stopObservingBets?.()
   loadError.value = ''
@@ -250,6 +264,7 @@ const stopObservingAuth = observeAuth((firebaseUser) => {
   operations.clear()
   saving.value = false
   deletingIds.value = []
+  updatingIds.value = []
   actionErrors.value = []
   editingBet.value = null
   restoredBet.value = null
@@ -357,7 +372,7 @@ onUnmounted(() => {
     <section v-else-if="activeView === 'history' && !betsLoading && !loadError" class="content-card" aria-label="Histórico de entradas">
       <div class="section-heading"><div><h2>Histórico</h2><span class="section-caption">Consulte, filtre e edite suas entradas.</span></div><span>{{ bets.length }} cadastrada(s)</span></div>
       <BetFilters v-model="filters" :bets="bets" />
-      <BetList :bets="visibleBets" :deleting-ids="deletingIds" :busy="busy" @edit="editBet" @remove="removeBet" />
+      <BetList :bets="visibleBets" :deleting-ids="deletingIds" :updating-ids="updatingIds" :busy="busy" @edit="editBet" @remove="removeBet" @update-result="updateBetResult" />
     </section>
 
     <nav v-if="activeView !== 'account'" class="bottom-nav" aria-label="Navegação principal">

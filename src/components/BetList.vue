@@ -1,11 +1,11 @@
 <script setup>
 import { computed } from 'vue'
-import { BET_RESULT_LABELS } from '../domain/bet-status.js'
+import { BET_RESULTS, BET_RESULT_LABELS } from '../domain/bet-status.js'
 import { calculateDailyResults } from '../domain/calculations.js'
 import { useProgressiveList } from '../composables/useProgressiveList.js'
 
-const props = defineProps({ bets: { type: Array, required: true }, deletingIds: { type: Array, default: () => [] }, busy: Boolean })
-const emit = defineEmits(['remove', 'edit'])
+const props = defineProps({ bets: { type: Array, required: true }, deletingIds: { type: Array, default: () => [] }, updatingIds: { type: Array, default: () => [] }, busy: Boolean })
+const emit = defineEmits(['remove', 'edit', 'update-result'])
 const dailyResults = computed(() => calculateDailyResults(props.bets))
 const { visibleItems: visibleDays, hasMore, sentinel } = useProgressiveList(dailyResults, 10)
 
@@ -30,6 +30,13 @@ const formatDate = (date) => new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full
           </div>
           <div class="bet-return">
             <strong :class="bet.netReturn < 0 ? 'negative' : 'positive'">{{ formatCurrency(bet.netReturn) }}</strong>
+            <span v-if="bet.wasTaken && bet.result === BET_RESULTS.IN_PROGRESS" class="quick-result-actions" aria-label="Atualizar resultado">
+              <span v-if="updatingIds.includes(bet.id)" class="quick-update-status" role="status">Atualizando…</span>
+              <template v-else>
+                <button :disabled="busy" type="button" :aria-label="`Marcar entrada com ODD ${bet.odd} como ganha`" @click="emit('update-result', { bet, result: BET_RESULTS.GREEN })">Ganha</button>
+                <button :disabled="busy" type="button" :aria-label="`Marcar entrada com ODD ${bet.odd} como perdida`" @click="emit('update-result', { bet, result: BET_RESULTS.RED })">Perdida</button>
+              </template>
+            </span>
             <span class="row-actions"><button :disabled="busy" type="button" :aria-label="`Editar entrada com ODD ${bet.odd}`" @click="emit('edit', bet)">Editar</button><button :disabled="busy" type="button" :aria-label="`Excluir entrada com ODD ${bet.odd}`" @click="emit('remove', bet)">{{ deletingIds.includes(bet.id) ? 'Excluindo…' : 'Excluir' }}</button></span>
           </div>
         </li>

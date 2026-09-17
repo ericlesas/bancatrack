@@ -1,6 +1,7 @@
 const actions = {
   create: 'salvar a entrada',
   edit: 'salvar as alterações',
+  result: 'atualizar o resultado',
   delete: 'excluir a entrada',
   load: 'carregar suas entradas'
 }

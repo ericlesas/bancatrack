@@ -136,6 +136,35 @@ describe('ações de entradas', () => {
     expect(state.actionErrors[0].message).toContain('Confira a data')
   })
 
+  it('atualiza rapidamente uma entrada em andamento e impede envios duplicados', async () => {
+    const pendingBet = { ...bet, result: 'in_progress' }
+    const updatedBet = { ...pendingBet, result: 'green' }
+    const write = deferred(); updateBet.mockReturnValue(write.promise)
+    const task = state.updateBetResult({ bet: pendingBet, result: 'green' })
+    await state.updateBetResult({ bet: pendingBet, result: 'red' })
+    expect(updateBet).toHaveBeenCalledTimes(1)
+    expect(updateBet).toHaveBeenCalledWith('user-1', updatedBet)
+    expect(state.updatingIds).toEqual([bet.id])
+    snapshot([updatedBet], { pendingIds: [bet.id] })
+    expect(state.updatingIds).toEqual([])
+    write.resolve(); await task
+  })
+
+  it('informa a falha da atualização rápida sem oferecer restauração do formulário', async () => {
+    const pendingBet = { ...bet, result: 'in_progress' }
+    updateBet.mockRejectedValue({ code: 'permission-denied' })
+    await state.updateBetResult({ bet: pendingBet, result: 'red' })
+    expect(state.updatingIds).toEqual([])
+    expect(state.actionErrors[0].message).toContain('atualizar o resultado')
+    expect(state.actionErrors[0].bet).toBeNull()
+  })
+
+  it('ignora atualização rápida de entrada não realizada ou já finalizada', async () => {
+    await state.updateBetResult({ bet: { ...bet, wasTaken: false, result: 'in_progress' }, result: 'green' })
+    await state.updateBetResult({ bet, result: 'red' })
+    expect(updateBet).not.toHaveBeenCalled()
+  })
+
   it('não executa ações de persistência sem usuário autenticado', async () => {
     auth(null)
     await state.addBet(bet)

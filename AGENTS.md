@@ -110,8 +110,6 @@ Ao receber uma tarefa:
 ## Próximas mudanças
 
 - Preparação para distribuição futura: validar a política de privacidade e a prévia de compartilhamento após publicação; criar variantes de ícones Android maskable/nativos e assets iOS. Revisão e requisitos em `docs/publication-readiness.md`.
-- Adicionar exportação dos dados (verificar se existe na versão free de outros produtos similares).
-- Melhorar o lançamento de entradas: Atalhos para datas comuns, como “Hoje”; Atualização rápida de apostas “Em andamento” para “Ganha” ou “Perdida”.
 
 ## Pendências da feature de configurações de conta
 
